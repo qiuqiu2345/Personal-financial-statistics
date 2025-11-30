@@ -1,0 +1,1808 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高级个人金融管理器 (PFAS)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <style>
+        /* 默认 CSS 变量 - Indigo Theme */
+        :root {
+            --pfas-primary-rgb: 79, 70, 229; /* indigo-600 */
+            --pfas-primary: #4f46e5;
+            --pfas-primary-light: #e0e7ff; /* indigo-100 */
+            --pfas-bg-color: #f7f9fc;
+            --pfas-font-family: 'Inter', sans-serif;
+            --pfas-font-size: 1rem; /* base */
+        }
+        
+        /* 动态主题类 */
+        .theme-green { --pfas-primary-rgb: 16, 185, 129; --pfas-primary: #10b981; --pfas-primary-light: #d1fae5; }
+        .theme-red { --pfas-primary-rgb: 239, 68, 68; --pfas-primary: #ef4444; --pfas-primary-light: #fee2e2; }
+        .theme-blue { --pfas-primary-rgb: 59, 130, 246; --pfas-primary: #3b82f6; --pfas-primary-light: #dbeafe; }
+        
+        /* 字体大小类 */
+        .font-sm { --pfas-font-size: 0.875rem; }
+        .font-lg { --pfas-font-size: 1.125rem; }
+        
+        /* 字体形状（Family）类 */
+        .font-serif { --pfas-font-family: 'Georgia', serif; }
+        .font-mono { --pfas-font-family: 'Courier New', monospace; }
+
+        /* 背景风格类 */
+        .bg-style-dark { --pfas-bg-color: #1f2937; } /* gray-800 */
+        .bg-style-dark .app-container { background-color: #374151; } /* gray-700 */
+        .bg-style-dark .app-container, .bg-style-dark p, .bg-style-dark h1, .bg-style-dark h2, .bg-style-dark h3, .bg-style-dark label { color: #f3f4f6; } /* text-gray-100 */
+        .bg-style-dark .bg-white { background-color: #374151; }
+        .bg-style-dark .bg-gray-50 { background-color: #4b5563; }
+        .bg-style-dark .bg-gray-100 { background-color: #4b5563; }
+        .bg-style-dark input, .bg-style-dark select { background-color: #6b7280; border-color: #4b5563; color: #f3f4f6; }
+
+
+        /* 基础样式应用 CSS 变量 */
+        body {
+            font-family: var(--pfas-font-family);
+            font-size: var(--pfas-font-size);
+            background-color: var(--pfas-bg-color); 
+            transition: background-color 0.3s, color 0.3s, font-size 0.3s, font-family 0.3s;
+        }
+        .app-container {
+             /* 调整容器背景色以匹配主题 */
+             background-color: white; 
+             transition: background-color 0.3s;
+        }
+        .text-primary { color: var(--pfas-primary); }
+        .bg-primary { background-color: var(--pfas-primary); }
+        .border-primary { border-color: var(--pfas-primary); }
+        .hover-bg-primary:hover { background-color: var(--pfas-primary); opacity: 0.9; }
+        .tab-btn.active {
+            border-color: var(--pfas-primary);
+            color: var(--pfas-primary);
+            font-weight: 600;
+        }
+        /* 核心按钮颜色调整 */
+        .btn-primary {
+            background-color: var(--pfas-primary);
+        }
+        .btn-primary:hover {
+            background-color: rgba(var(--pfas-primary-rgb), 0.8);
+        }
+        .ring-primary:focus {
+            --tw-ring-color: var(--pfas-primary);
+        }
+        
+        /* Chart.js 字体引入 */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Noto+Serif+SC:wght@200..900&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+        
+        .scrollable-list {
+            max-height: 450px;
+            overflow-y: auto;
+        }
+        /* 美化滚动条 */
+        .scrollable-list::-webkit-scrollbar { width: 8px; }
+        .scrollable-list::-webkit-scrollbar-thumb { background-color: #d1d5db; border-radius: 4px; }
+        .scrollable-list::-webkit-scrollbar-track { background-color: #f3f4f6; }
+    </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen">
+
+    <div id="app" class="max-w-7xl mx-auto bg-white shadow-2xl rounded-xl p-6 md:p-10 app-container">
+        
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-800 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-primary mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
+                    <path fill-rule="evenodd" d="M18 9H2v7a2 2 0 002 2h12a2 2 0 002-2V9zM4 14a1 1 0 110-2h1a1 1 0 110 2H4zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd" />
+                </svg>
+                高级个人金融管理器
+            </h1>
+        </header>
+
+        <div class="border-b border-gray-200 mb-6">
+            <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                <button type="button" class="tab-btn active px-3 py-2 text-sm font-medium transition duration-150 ease-in-out border-b-4" data-tab="ledger">记账本</button>
+                <button type="button" class="tab-btn px-3 py-2 text-sm font-medium transition duration-150 ease-in-out border-b-4 border-transparent" data-tab="assets">资产统计</button>
+                <button type="button" class="tab-btn px-3 py-2 text-sm font-medium transition duration-150 ease-in-out border-b-4 border-transparent" data-tab="budget">预算中心</button>
+                <button type="button" class="tab-btn px-3 py-2 text-sm font-medium transition duration-150 ease-in-out border-b-4 border-transparent" data-tab="reports">报告分析</button>
+                <button type="button" class="tab-btn px-3 py-2 text-sm font-medium transition duration-150 ease-in-out border-b-4 border-transparent" data-tab="settings">设置</button>
+            </nav>
+        </div>
+
+        <div id="tab-content">
+            <div id="ledger" class="tab-pane">
+                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-1 bg-gray-50 p-6 rounded-lg shadow-inner">
+                        <h2 class="text-xl font-semibold mb-4 text-gray-700">新增交易</h2>
+                        <form id="transaction-form" class="space-y-4">
+                            <div>
+                                <label for="type" class="block text-sm font-medium text-gray-700">类型</label>
+                                <select id="type" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none ring-primary focus:border-primary sm:text-sm rounded-md">
+                                    <option value="income">收入</option>
+                                    <option value="expense" selected>支出</option>
+                                    <option value="transfer">转账 (暂不影响总资产)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="amount" class="block text-sm font-medium text-gray-700">金额 (¥)</label>
+                                <input type="number" id="amount" required min="0.01" step="0.01" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 ring-primary focus:border-primary" placeholder="100.00">
+                            </div>
+                            <div>
+                                <label for="category" class="block text-sm font-medium text-gray-700">类别</label>
+                                <select id="category" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none ring-primary focus:border-primary sm:text-sm rounded-md">
+                                    </select>
+                            </div>
+                            <div>
+                                <label for="account" class="block text-sm font-medium text-gray-700">账户</label>
+                                <select id="account" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none ring-primary focus:border-primary sm:text-sm rounded-md">
+                                    <option value="现金">现金</option>
+                                    <option value="支付宝">支付宝</option>
+                                    <option value="微信">微信</option>
+                                    <option value="银行卡">银行卡</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="date" class="block text-sm font-medium text-gray-700">日期</label>
+                                <input type="date" id="date" required class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 ring-primary focus:border-primary">
+                            </div>
+                            <div>
+                                <label for="description" class="block text-sm font-medium text-gray-700">描述 (可选)</label>
+                                <input type="text" id="description" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 ring-primary focus:border-primary" placeholder="购买商品或服务详情">
+                            </div>
+                            <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white btn-primary hover-bg-primary focus:outline-none focus:ring-2 focus:ring-offset-2 ring-primary">
+                                记一笔
+                            </button>
+                        </form>
+                    </div>
+                    <div class="lg:col-span-2 space-y-6">
+                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="bg-white p-4 rounded-lg shadow-lg border-l-4 border-green-500">
+                                <p class="text-sm font-medium text-gray-500">本月收入</p>
+                                <p id="total-income" class="text-2xl font-bold text-green-600">¥ 0.00</p>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg shadow-lg border-l-4 border-red-500">
+                                <p class="text-sm font-medium text-gray-500">本月支出</p>
+                                <p id="total-expense" class="text-2xl font-bold text-red-600">¥ 0.00</p>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg shadow-lg border-l-4 border-primary">
+                                <p class="text-sm font-medium text-gray-500">本月结余</p>
+                                <p id="net-balance" class="text-2xl font-bold text-primary">¥ 0.00</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-lg shadow-lg">
+                            <h3 class="text-lg font-semibold mb-3 text-gray-700">账户余额</h3>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="account-balances">
+                                </div>
+                        </div>
+                        
+                        <div class="bg-white p-4 rounded-lg shadow-lg">
+                            <h3 class="text-lg font-semibold mb-3 text-gray-700">交易记录</h3>
+                            
+                            <div class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-4 p-3 bg-gray-50 rounded-lg">
+                                <input type="text" id="filter-keyword" placeholder="关键词/描述" class="col-span-2 md:col-span-1 p-2 border rounded-md text-sm">
+                                <select id="filter-type" class="p-2 border rounded-md text-sm">
+                                    <option value="">所有类型</option>
+                                    <option value="income">收入</option>
+                                    <option value="expense">支出</option>
+                                </select>
+                                <select id="filter-category" class="p-2 border rounded-md text-sm">
+                                    <option value="">所有类别</option>
+                                </select>
+                                <select id="filter-account" class="p-2 border rounded-md text-sm">
+                                    <option value="">所有账户</option>
+                                </select>
+                                <div class="flex space-x-2 col-span-2 md:col-span-2">
+                                    <button id="apply-filter-btn" class="flex-grow py-2 px-3 text-sm rounded-md text-white btn-primary hover-bg-primary">筛选</button>
+                                    <button id="reset-filter-btn" class="flex-grow py-2 px-3 text-sm rounded-md text-gray-700 bg-gray-200 hover:bg-gray-300">重置</button>
+                                </div>
+                            </div>
+
+                            <div id="transaction-list" class="scrollable-list divide-y divide-gray-200">
+                            </div>
+
+                            <div class="mt-4 flex justify-end space-x-3">
+                                <input type="file" id="import-file" class="hidden" accept=".json">
+                                <button id="import-btn" class="py-2 px-4 text-sm rounded-md text-gray-700 bg-yellow-200 hover:bg-yellow-300">导入数据</button>
+                                <button id="export-btn" class="py-2 px-4 text-sm rounded-md text-white bg-teal-500 hover:bg-teal-600">导出数据 (备份)</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="assets" class="tab-pane hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                     <div class="lg:col-span-1 bg-gray-50 p-6 rounded-lg shadow-inner">
+                        <h2 class="text-xl font-semibold mb-4 text-gray-700">新增资产/负债</h2>
+                        <form id="asset-form" class="space-y-4">
+                            <div>
+                                <label for="asset-type" class="block text-sm font-medium text-gray-700">类型</label>
+                                <select id="asset-type" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none ring-primary focus:border-primary sm:text-sm rounded-md">
+                                    <option value="Asset">资产</option>
+                                    <option value="Liability">负债</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="asset-name" class="block text-sm font-medium text-gray-700">名称</label>
+                                <input type="text" id="asset-name" required class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 ring-primary focus:border-primary" placeholder="房产、股票、贷款等">
+                            </div>
+                            <div>
+                                <label for="asset-value" class="block text-sm font-medium text-gray-700">当前价值 (¥)</label>
+                                <input type="number" id="asset-value" required min="0" step="0.01" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 ring-primary focus:border-primary" placeholder="10000.00">
+                            </div>
+                            <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white btn-primary hover-bg-primary focus:outline-none focus:ring-2 focus:ring-offset-2 ring-primary">
+                                添加
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="lg:col-span-2 space-y-6">
+                        <div class="bg-primary-light p-6 rounded-lg shadow-lg border-l-8 border-primary">
+                            <p class="text-sm font-medium text-primary mb-2">当前净资产 (包含所有账户余额)</p>
+                            <p id="net-worth" class="text-4xl font-extrabold text-primary">¥ 0.00</p>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-lg shadow-lg">
+                            <h3 class="text-lg font-semibold mb-3 text-gray-700">其他资产列表</h3>
+                            <div id="asset-list" class="scrollable-list divide-y divide-gray-200">
+                                </div>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-lg shadow-lg">
+                            <h3 class="text-lg font-semibold mb-3 text-gray-700">负债列表</h3>
+                            <div id="liability-list" class="scrollable-list divide-y divide-gray-200">
+                                </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="budget" class="tab-pane hidden">
+                <h2 class="text-2xl font-bold mb-6 text-gray-800">预算中心 (按类别设置)</h2>
+                
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">预算设置与追踪</h3>
+                    <p class="text-sm text-gray-500 mb-4">设置每个支出类别的月度预算，所有预算将于每月初自动重置。</p>
+                    
+                    <div id="budget-list" class="space-y-4 divide-y divide-gray-100">
+                        </div>
+                    
+                    <button id="save-budgets-btn" class="mt-6 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white btn-primary hover-bg-primary focus:outline-none focus:ring-2 focus:ring-offset-2 ring-primary">
+                        保存所有预算设置
+                    </button>
+                </div>
+            </div>
+
+            <div id="reports" class="tab-pane hidden">
+                <h2 class="text-2xl font-bold mb-6 text-gray-800">高级财务报告分析</h2>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-lg shadow-lg">
+                        <h3 class="text-lg font-semibold mb-4 text-gray-700">本月支出类别分布</h3>
+                        <div class="h-80">
+                            <canvas id="expense-pie-chart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white p-6 rounded-lg shadow-lg">
+                        <h3 class="text-lg font-semibold mb-4 text-gray-700">近六个月收支趋势</h3>
+                        <div class="h-80">
+                            <canvas id="monthly-trend-chart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-lg shadow-lg lg:col-span-2">
+                        <h3 class="text-lg font-semibold mb-4 text-gray-700">账户余额变化趋势</h3>
+                        <div class="h-80">
+                            <canvas id="account-balance-trend-chart"></canvas>
+                        </div>
+                    </div>
+
+                     <div class="bg-white p-6 rounded-lg shadow-lg lg:col-span-2">
+                        <h3 class="text-lg font-semibold mb-4 text-gray-700">本月类别收支对比</h3>
+                        <div class="h-80">
+                            <canvas id="category-bar-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="settings" class="tab-pane hidden">
+                <h2 class="text-2xl font-bold mb-6 text-gray-800">系统与账户设置</h2>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    
+                    <div class="bg-white p-6 rounded-lg shadow-lg">
+                        <h3 class="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">外观与主题设置 (UI, 颜色, 字体)</h3>
+                        <div class="space-y-4">
+                            
+                            <div>
+                                <label for="setting-theme-color" class="block text-sm font-medium text-gray-700">主题颜色</label>
+                                <select id="setting-theme-color" class="mt-1 block w-full pl-3 pr-10 py-2 border-gray-300 rounded-md">
+                                    <option value="indigo">默认 (靛青)</option>
+                                    <option value="green">绿色</option>
+                                    <option value="red">红色</option>
+                                    <option value="blue">蓝色</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label for="setting-background-style" class="block text-sm font-medium text-gray-700">背景风格/模式</label>
+                                <select id="setting-background-style" class="mt-1 block w-full pl-3 pr-10 py-2 border-gray-300 rounded-md">
+                                    <option value="light">浅色模式 (默认)</option>
+                                    <option value="dark">深色模式</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label for="setting-font-family" class="block text-sm font-medium text-gray-700">字体形状/风格</label>
+                                <select id="setting-font-family" class="mt-1 block w-full pl-3 pr-10 py-2 border-gray-300 rounded-md">
+                                    <option value="sans">无衬线 (Inter/默认)</option>
+                                    <option value="serif">衬线体 (Noto Serif SC)</option>
+                                    <option value="mono">等宽体 (Space Mono)</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label for="setting-font-size" class="block text-sm font-medium text-gray-700">字体大小</label>
+                                <select id="setting-font-size" class="mt-1 block w-full pl-3 pr-10 py-2 border-gray-300 rounded-md">
+                                    <option value="sm">小</option>
+                                    <option value="base">默认</option>
+                                    <option value="lg">大</option>
+                                </select>
+                            </div>
+
+                             <button id="apply-settings-btn" class="w-full py-2 px-4 text-sm rounded-md text-white btn-primary hover-bg-primary">
+                                应用并保存外观设置
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white p-6 rounded-lg shadow-lg">
+                        <h3 class="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">账户余额管理</h3>
+                        <p class="text-sm text-gray-500 mb-4">设置账户的**初始余额**。交易记录将在此基础上计算当前余额。</p>
+                        <form id="initial-balance-form" class="space-y-4">
+                            <div id="initial-balance-list" class="divide-y divide-gray-200">
+                                </div>
+                            <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                保存所有初始余额
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-lg shadow-lg lg:col-span-2">
+                        <h3 class="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">收支类别管理</h3>
+                        <p class="text-sm text-gray-500 mb-4">在此添加或删除支出和收入类别。 (如：美发店)</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="p-4 border rounded-lg bg-gray-50">
+                                <h4 class="font-medium mb-3 text-gray-700">添加新类别</h4>
+                                <div class="flex space-x-2">
+                                    <input type="text" id="new-category-name" placeholder="输入新类别名称 (如: 美发店)" class="flex-grow p-2 border rounded-md text-sm ring-primary focus:border-primary">
+                                    <select type="text" id="new-category-type" class="p-2 border rounded-md text-sm">
+                                        <option value="expense">支出</option>
+                                        <option value="income">收入</option>
+                                    </select>
+                                    <button id="add-category-btn" class="py-2 px-4 text-sm rounded-md text-white btn-primary hover-bg-primary">添加</button>
+                                </div>
+                            </div>
+                            
+                            <div class="p-4 border rounded-lg">
+                                <h4 class="font-medium mb-3 text-gray-700">现有支出类别</h4>
+                                <div id="expense-category-list" class="flex flex-wrap gap-2">
+                                    </div>
+                            </div>
+                             <div class="p-4 border rounded-lg md:col-span-2">
+                                <h4 class="font-medium mb-3 text-gray-700">现有收入类别</h4>
+                                <div id="income-category-list" class="flex flex-wrap gap-2">
+                                    </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            
+            <div id="edit-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+                <div class="relative top-10 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
+                    <div class="mt-3 text-center">
+                        <h3 class="text-xl leading-6 font-medium text-gray-900 mb-4">编辑交易</h3>
+                        <form id="edit-transaction-form" class="space-y-4 text-left">
+                            <input type="hidden" id="edit-id">
+                            
+                            <div>
+                                <label for="edit-type" class="block text-sm font-medium text-gray-700">类型</label>
+                                <select id="edit-type" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 rounded-md">
+                                    <option value="income">收入</option>
+                                    <option value="expense">支出</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="edit-amount" class="block text-sm font-medium text-gray-700">金额 (¥)</label>
+                                <input type="number" id="edit-amount" required min="0.01" step="0.01" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2">
+                            </div>
+                            <div>
+                                <label for="edit-category" class="block text-sm font-medium text-gray-700">类别</label>
+                                <select id="edit-category" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 rounded-md">
+                                    </select>
+                            </div>
+                            <div>
+                                <label for="edit-account" class="block text-sm font-medium text-gray-700">账户</label>
+                                <select id="edit-account" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 rounded-md">
+                                    </select>
+                            </div>
+                            <div>
+                                <label for="edit-date" class="block text-sm font-medium text-gray-700">日期</label>
+                                <input type="date" id="edit-date" required class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2">
+                            </div>
+                            <div>
+                                <label for="edit-description" class="block text-sm font-medium text-gray-700">描述 (可选)</label>
+                                <input type="text" id="edit-description" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2">
+                            </div>
+
+                            <div class="flex justify-end space-x-4 pt-4">
+                                <button type="button" id="close-edit-modal-btn" class="py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                                    取消
+                                </button>
+                                <button type="submit" class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700">
+                                    保存更改
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+    // --- 1. 全局数据与默认配置 ---
+    let transactions = [];
+    let accounts = {
+        '现金': { initial: 0, current: 0 },
+        '支付宝': { initial: 0, current: 0 },
+        '微信': { initial: 0, current: 0 },
+        '银行卡': { initial: 0, current: 0 },
+    }; // { 'AccountName': { initial: number, current: number } }
+    let assets = []; // [{ id, name, type: 'Asset'/'Liability', value }]
+    let categoryBudgets = {}; // { 'CategoryName': amount }
+
+    let nextTransactionId = 1;
+    let nextAssetId = 1;
+
+    // 新增：类别配置，可被管理
+    let categories = {
+        expense: ['餐饮', '交通', '住房', '购物', '娱乐', '教育', '医疗', '美发店', '其他支出'],
+        income: ['工资', '投资收益', '兼职', '礼金', '其他收入']
+    };
+    
+    // 新增：UI 设置
+    let settings = {
+        themeColor: 'indigo', // indigo, green, red, blue
+        fontFamily: 'sans', // sans, serif, mono
+        fontSize: 'base', // sm, base, lg
+        backgroundStyle: 'light' // light, dark
+    };
+
+    // --- 2. 缓存 DOM 元素 ---
+    const $form = document.getElementById('transaction-form');
+    const $assetForm = document.getElementById('asset-form');
+    const $transactionList = document.getElementById('transaction-list');
+    const $accountBalancesDiv = document.getElementById('account-balances');
+    const $editModal = document.getElementById('edit-modal');
+    
+    // 预算中心
+    const $budgetList = document.getElementById('budget-list');
+    const $saveBudgetsBtn = document.getElementById('save-budgets-btn');
+
+    // 初始余额
+    const $initialBalanceList = document.getElementById('initial-balance-list');
+    const $initialBalanceForm = document.getElementById('initial-balance-form');
+    
+    // UI设置
+    const $settingThemeColor = document.getElementById('setting-theme-color');
+    const $settingFontFamily = document.getElementById('setting-font-family');
+    const $settingFontSize = document.getElementById('setting-font-size');
+    const $settingBackgroundStyle = document.getElementById('setting-background-style');
+    const $applySettingsBtn = document.getElementById('apply-settings-btn');
+    const $body = document.body;
+
+    // 类别管理
+    const $newCategoryName = document.getElementById('new-category-name');
+    const $newCategoryType = document.getElementById('new-category-type');
+    const $addCategoryBtn = document.getElementById('add-category-btn');
+    const $expenseCategoryList = document.getElementById('expense-category-list');
+    const $incomeCategoryList = document.getElementById('income-category-list');
+    
+    // 新增：导入/导出元素
+    const $exportBtn = document.getElementById('export-btn');
+    const $importBtn = document.getElementById('import-btn');
+    const $importFile = document.getElementById('import-file'); 
+
+
+    let pieChart, trendChart, accountTrendChart, categoryBarChart; // Chart.js 实例
+
+    // --- 3. 数据持久化 (LocalStorage) ---
+
+    /**
+     * 从 localStorage 加载数据
+     */
+    function loadData() {
+        const storedTransactions = localStorage.getItem('pfas_transactions');
+        const storedAccounts = localStorage.getItem('pfas_accounts');
+        const storedAssets = localStorage.getItem('pfas_assets');
+        const storedNextId = localStorage.getItem('pfas_nextTransactionId');
+        const storedBudgets = localStorage.getItem('pfas_categoryBudgets');
+        const storedCategories = localStorage.getItem('pfas_categories');
+        const storedSettings = localStorage.getItem('pfas_settings');
+
+
+        if (storedTransactions) transactions = JSON.parse(storedTransactions);
+        if (storedAssets) assets = JSON.parse(storedAssets);
+        if (storedNextId) nextTransactionId = parseInt(storedNextId);
+        if (storedBudgets) categoryBudgets = JSON.parse(storedBudgets);
+        if (storedSettings) settings = { ...settings, ...JSON.parse(storedSettings) };
+
+        if (storedCategories) {
+            const loadedCategories = JSON.parse(storedCategories);
+            categories.expense = loadedCategories.expense || categories.expense;
+            categories.income = loadedCategories.income || categories.income;
+        }
+
+        if (storedAccounts) {
+            const loadedAccounts = JSON.parse(storedAccounts);
+            Object.keys(loadedAccounts).forEach(key => {
+                if (loadedAccounts[key] && typeof loadedAccounts[key] === 'object' && loadedAccounts[key].initial !== undefined) {
+                    accounts[key] = loadedAccounts[key];
+                } else if (typeof loadedAccounts[key] === 'number') {
+                    // 兼容旧结构
+                    accounts[key] = { initial: loadedAccounts[key], current: 0 };
+                } else {
+                    // 确保默认账户存在
+                    if (!accounts[key]) accounts[key] = { initial: 0, current: 0 };
+                }
+            });
+        }
+        
+        transactions.forEach(t => t.date = t.date ? new Date(t.date) : new Date());
+    }
+
+    /**
+     * 保存数据到 localStorage
+     */
+    function saveData() {
+        localStorage.setItem('pfas_transactions', JSON.stringify(transactions));
+        localStorage.setItem('pfas_accounts', JSON.stringify(accounts)); 
+        localStorage.setItem('pfas_assets', JSON.stringify(assets));
+        localStorage.setItem('pfas_nextTransactionId', nextTransactionId.toString());
+        localStorage.setItem('pfas_categoryBudgets', JSON.stringify(categoryBudgets));
+        // 补充保存类别和设置
+        localStorage.setItem('pfas_categories', JSON.stringify(categories)); 
+        localStorage.setItem('pfas_settings', JSON.stringify(settings)); 
+    }
+
+    // --- 4. 导入/导出功能实现 ---
+
+    /**
+     * 导出所有数据为 JSON 文件
+     */
+    function exportData() {
+        const dataToExport = {
+            version: 'PFAS_V1.0',
+            timestamp: new Date().toISOString(),
+            transactions: transactions.map(t => ({
+                ...t,
+                // 将 Date 对象转换为 ISO 格式字符串，便于存储和导入
+                date: t.date.toISOString(), 
+            })),
+            accounts: accounts,
+            assets: assets,
+            nextTransactionId: nextTransactionId,
+            categoryBudgets: categoryBudgets,
+            categories: categories,
+            settings: settings,
+        };
+        
+        const dataStr = JSON.stringify(dataToExport, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const now = new Date();
+        const dateStr = `${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}`;
+        const fileName = `pfas_backup_${dateStr}.json`;
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        // 使用 SweetAlert 或其他更优雅的提示更好，这里使用原生 alert
+        alert('数据导出成功！文件已下载：' + fileName);
+    }
+
+    /**
+     * 导入数据
+     */
+    function importData(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (!confirm('警告：导入数据将覆盖当前所有本地数据。确定要继续吗？')) {
+            // 清除文件输入，以便下次选择相同文件也能触发 change 事件
+            e.target.value = ''; 
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            try {
+                const importedData = JSON.parse(event.target.result);
+
+                if (!importedData || !Array.isArray(importedData.transactions)) {
+                    throw new Error('导入的文件格式不正确或缺少关键数据 (transactions)。');
+                }
+                
+                // 1. 覆盖全局变量 (使用展开运算符进行浅合并，防止丢失新的默认账户或设置项)
+                // 仅在导入文件包含相应数据时才覆盖
+                transactions = importedData.transactions;
+                
+                if (importedData.accounts) accounts = { ...accounts, ...importedData.accounts }; 
+                assets = importedData.assets || [];
+                nextTransactionId = importedData.nextTransactionId || nextTransactionId;
+                categoryBudgets = importedData.categoryBudgets || {};
+                
+                if (importedData.categories) categories = { ...categories, ...importedData.categories };
+                if (importedData.settings) settings = { ...settings, ...importedData.settings };
+
+                // 2. 核心：将所有交易日期字符串转换回 Date 对象
+                // 这与 loadData 中的处理方式一致
+                transactions.forEach(t => t.date = t.date ? new Date(t.date) : new Date());
+
+                // 3. 重新计算和更新 UI
+                saveData(); // 导入成功后，立即保存到本地存储
+                updateUI();
+                
+                alert(`数据导入成功！版本: ${importedData.version || '未知版本'}`);
+
+            } catch (error) {
+                console.error('导入失败:', error);
+                alert('数据导入失败：' + error.message + ' 请检查文件是否为有效的 PFAS JSON 备份文件。');
+            }
+            // 无论成功还是失败，都清除文件输入
+            e.target.value = '';
+        };
+
+        reader.onerror = function() {
+            alert('文件读取失败。');
+            e.target.value = '';
+        };
+
+        reader.readAsText(file);
+    }
+    
+    // --- 5. 核心计算函数 ---
+    
+    // ... (calculateNetWorth, applySettings, deleteAsset, handleInitialBalanceSubmit, 
+    //      addTransaction, deleteTransaction, editTransaction, etc. functions remain here) ...
+    // ... (由于篇幅限制，此处省略了所有未修改的函数，它们保持在原位置) ...
+
+    /**
+     * 计算净资产
+     */
+    function calculateNetWorth() {
+        let totalCash = Object.values(accounts).reduce((sum, acc) => sum + acc.current, 0);
+        let totalOtherAssets = assets.filter(a => a.type === 'Asset').reduce((sum, a) => sum + parseFloat(a.value), 0);
+        let totalLiabilities = assets.filter(a => a.type === 'Liability').reduce((sum, a) => sum + parseFloat(a.value), 0);
+
+        const totalAssets = totalCash + totalOtherAssets;
+        const netWorth = totalAssets - totalLiabilities;
+
+        return { totalCash, totalOtherAssets, totalLiabilities, totalAssets, netWorth };
+    }
+
+    /**
+     * 计算并更新总览数据 (本月收支、账户余额)
+     */
+    function calculateSummary() {
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth();
+
+        let totalIncome = 0;
+        let totalExpense = 0;
+
+        // 1. 重置账户余额到初始余额
+        Object.values(accounts).forEach(acc => {
+            acc.current = acc.initial;
+        });
+
+        // 2. 重新计算所有交易对账户余额的影响
+        // 为了计算准确，必须按日期排序处理，确保余额历史是正确的
+        const sortedTransactions = [...transactions].sort((a, b) => a.date - b.date);
+        sortedTransactions.forEach(t => {
+            if (t.type !== 'transfer' && accounts.hasOwnProperty(t.account)) {
+                accounts[t.account].current += t.amount;
+            }
+        });
+
+        // 3. 筛选本月交易计算概览 (仅影响统计卡片)
+        transactions.forEach(t => {
+            if (t.date.getFullYear() === currentYear && t.date.getMonth() === currentMonth) {
+                if (t.type === 'income') {
+                    totalIncome += t.amount;
+                } else if (t.type === 'expense') {
+                    totalExpense += -t.amount;
+                }
+            }
+        });
+
+        // 更新 UI 卡片
+        document.getElementById('total-income').textContent = `¥ ${totalIncome.toFixed(2)}`;
+        document.getElementById('total-expense').textContent = `¥ ${totalExpense.toFixed(2)}`;
+        
+        const netBalance = totalIncome - totalExpense;
+        document.getElementById('net-balance').textContent = `¥ ${netBalance.toFixed(2)}`;
+        document.getElementById('net-balance').classList.toggle('text-red-600', netBalance < 0);
+        document.getElementById('net-balance').classList.toggle('text-primary', netBalance >= 0);
+
+        // 4. 清除和重新渲染预算提醒 (简版提醒，详细在 Budget Tab)
+        // 移除旧的预算提醒
+        const oldBudgetSpan = document.querySelector('#total-expense + span');
+        if (oldBudgetSpan) oldBudgetSpan.remove();
+
+        let totalBudget = Object.values(categoryBudgets).reduce((sum, val) => sum + val, 0);
+
+        if (totalBudget > 0) {
+            const expenseContainer = document.getElementById('total-expense').closest('div');
+            if (totalExpense > totalBudget) {
+                expenseContainer.insertAdjacentHTML('beforeend', `<span class="text-xs text-red-500 mt-1 block font-normal">(已超总预算 ¥${(totalExpense - totalBudget).toFixed(2)})</span>`);
+            } else {
+                expenseContainer.insertAdjacentHTML('beforeend', `<span class="text-xs text-gray-500 mt-1 block font-normal">(总预算 ¥${totalBudget.toFixed(2)}，剩余 ¥${(totalBudget - totalExpense).toFixed(2)})</span>`);
+            }
+        }
+    }
+
+
+    /**
+     * 核心更新函数：重新渲染所有组件
+     */
+    function updateUI(targetTab = 'ledger') {
+        saveData(); // 每次数据变更都保存
+        calculateSummary();
+        renderAccountBalances();
+        // 每次更新都确保下拉菜单是同步的
+        updateCategoryDropdowns(); 
+        updateAccountDropdowns(); // 确保账户下拉菜单也同步
+        renderInitialBalanceList(); // 更新设置中的初始余额列表
+
+        // 根据当前选中的 Tab 渲染相应内容
+        if (targetTab === 'ledger') {
+            renderTransactions(transactions);
+            // 更新筛选器中的账户和类别下拉菜单
+            renderFilterDropdowns(); 
+        } else if (targetTab === 'assets') {
+            updateAssetUI();
+        } else if (targetTab === 'budget') {
+            renderBudgetCenter();
+        } else if (targetTab === 'reports') {
+            renderExpensePieChart();
+            renderMonthlyTrendChart();
+            renderAccountBalanceTrendChart();
+            renderCategoryBarChart();
+        } else if (targetTab === 'settings') {
+            renderCategoryManagement();
+            // 确保设置项选中当前值
+            document.getElementById('setting-theme-color').value = settings.themeColor;
+            document.getElementById('setting-font-family').value = settings.fontFamily;
+            document.getElementById('setting-font-size').value = settings.fontSize;
+            document.getElementById('setting-background-style').value = settings.backgroundStyle;
+        }
+    }
+
+    // --- 6. 辅助渲染函数 (Account/Category/Transaction Rendering) ---
+
+    /**
+     * 渲染账户余额列表
+     */
+    function renderAccountBalances() {
+        const $accountBalancesDiv = document.getElementById('account-balances');
+        if (!$accountBalancesDiv) return;
+        $accountBalancesDiv.innerHTML = '';
+
+        Object.entries(accounts).forEach(([name, acc]) => {
+            const balance = acc.current;
+            const color = balance >= 0 ? 'text-green-600' : 'text-red-600';
+            const card = `
+                <div class="p-3 bg-gray-100 rounded-lg border border-gray-200">
+                    <p class="text-xs font-medium text-gray-500">${name}</p>
+                    <p class="text-lg font-bold ${color}">¥ ${balance.toFixed(2)}</p>
+                </div>
+            `;
+            $accountBalancesDiv.insertAdjacentHTML('beforeend', card);
+        });
+    }
+
+    /**
+     * 渲染初始余额列表 (设置页面)
+     */
+    function renderInitialBalanceList() {
+        if (!$initialBalanceList) return;
+        $initialBalanceList.innerHTML = '';
+        Object.entries(accounts).forEach(([name, acc]) => {
+            const item = `
+                <div class="flex items-center justify-between py-3">
+                    <label for="initial-${name}" class="block text-sm font-medium text-gray-700 w-1/3">${name} 初始余额 (¥)</label>
+                    <input type="number" id="initial-${name}" data-account-name="${name}" value="${acc.initial.toFixed(2)}" step="0.01" class="initial-balance-input mt-1 block w-2/3 shadow-sm sm:text-sm border-gray-300 rounded-md p-2 ring-primary focus:border-primary" placeholder="0.00">
+                </div>
+            `;
+            $initialBalanceList.insertAdjacentHTML('beforeend', item);
+        });
+    }
+
+
+    /**
+     * 渲染交易记录列表
+     */
+    function renderTransactions(filteredTransactions = transactions) {
+        $transactionList.innerHTML = '';
+        const sortedTransactions = [...filteredTransactions].sort((a, b) => b.date - a.date);
+
+        if (sortedTransactions.length === 0) {
+            $transactionList.innerHTML = '<p class="p-4 text-center text-gray-500">暂无交易记录或筛选结果为空。</p>';
+            return;
+        }
+
+        sortedTransactions.forEach(t => {
+            const isExpense = t.type === 'expense';
+            const isTransfer = t.type === 'transfer';
+            const amountText = `${isExpense ? '-' : (isTransfer ? '' : '+')}¥ ${Math.abs(t.amount).toFixed(2)}`;
+            const amountColor = isExpense ? 'text-red-600' : (isTransfer ? 'text-gray-600' : 'text-green-600');
+            const iconBg = isExpense ? 'bg-red-100' : (isTransfer ? 'bg-indigo-100' : 'bg-green-100');
+            const iconColor = isExpense ? 'text-red-600' : (isTransfer ? 'text-indigo-600' : 'text-green-600');
+            const dateString = t.date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'short', day: 'numeric' });
+            
+            // 转账交易不提供编辑功能
+            const editButton = isTransfer ? '' : `
+                <button onclick="openEditModal(${t.id})" class="text-primary hover:text-indigo-700 p-1 rounded-full hover:bg-indigo-100 transition duration-150">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                    </svg>
+                </button>
+            `;
+
+            const item = `
+                <div class="flex items-center p-3 hover:bg-gray-50 transition duration-150">
+                    <div class="flex-shrink-0 mr-3 p-2 rounded-full ${iconBg} ${iconColor}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            ${isExpense ? 
+                                `<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 00-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" />` : 
+                                (isTransfer ? 
+                                    `<path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 7a1 1 0 012 0v8a1 1 0 11-2 0V7zm5-1a1 1 0 00-1 1v8a1 1 0 102 0V7a1 1 0 00-1-1z" clip-rule="evenodd" />` : 
+                                    `<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 00-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" />`)}
+                        </svg>
+                    </div>
+                    <div class="flex-grow">
+                        <p class="text-sm font-medium text-gray-900">${t.category}${t.description ? ` - ${t.description}` : ''}</p>
+                        <p class="text-xs text-gray-500">${dateString} · ${t.account}</p>
+                    </div>
+                    <div class="flex flex-col items-end">
+                        <span class="text-sm font-semibold ${amountColor}">${amountText}</span>
+                        <div class="flex space-x-2 mt-1">
+                            ${editButton}
+                            <button onclick="deleteTransaction(${t.id})" class="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-100 transition duration-150">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 7a1 1 0 012 0v8a1 1 0 11-2 0V7zm5-1a1 1 0 00-1 1v8a1 1 0 102 0V7a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            $transactionList.insertAdjacentHTML('beforeend', item);
+        });
+    }
+
+    /**
+     * 更新类别下拉菜单 (记账/编辑/筛选)
+     */
+    function updateCategoryDropdowns() {
+        // 记账页面
+        const $typeSelect = document.getElementById('type');
+        const $categorySelect = document.getElementById('category');
+        // 编辑模态框
+        const $editTypeSelect = document.getElementById('edit-type');
+        const $editCategorySelect = document.getElementById('edit-category');
+
+        // 绑定记账表单的类别更新
+        if ($typeSelect && $categorySelect) {
+            const updateLedgerCategory = () => {
+                const selectedType = $typeSelect.value === 'expense' || $typeSelect.value === 'transfer' ? 'expense' : 'income';
+                const currentCategories = categories[selectedType] || [];
+                $categorySelect.innerHTML = currentCategories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+                // 默认选中第一个
+                if (currentCategories.length > 0) $categorySelect.value = currentCategories[0];
+            };
+            // 首次渲染
+            updateLedgerCategory();
+            // 绑定事件
+            $typeSelect.onchange = updateLedgerCategory;
+        }
+
+        // 绑定编辑模态框的类别更新
+        if ($editTypeSelect && $editCategorySelect) {
+            const updateEditCategory = () => {
+                const selectedType = $editTypeSelect.value;
+                const currentCategories = categories[selectedType] || [];
+                $editCategorySelect.innerHTML = currentCategories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+            };
+            updateEditCategory();
+            $editTypeSelect.onchange = updateEditCategory;
+        }
+    }
+
+     /**
+     * 更新账户下拉菜单 (记账/编辑)
+     */
+    function updateAccountDropdowns() {
+        const selects = [
+            document.getElementById('account'),
+            document.getElementById('edit-account'),
+        ];
+        
+        selects.forEach($select => {
+            if (!$select) return;
+            $select.innerHTML = '';
+            Object.keys(accounts).forEach(acc => {
+                $select.innerHTML += `<option value="${acc}">${acc}</option>`;
+            });
+        });
+    }
+
+    /**
+     * 渲染筛选器中的账户和类别下拉菜单
+     */
+    function renderFilterDropdowns() {
+        const $filterCategory = document.getElementById('filter-category');
+        const $filterAccount = document.getElementById('filter-account');
+
+        if ($filterCategory) {
+            $filterCategory.innerHTML = '<option value="">所有类别</option>';
+            [...categories.expense, ...categories.income].sort().forEach(cat => {
+                $filterCategory.innerHTML += `<option value="${cat}">${cat}</option>`;
+            });
+        }
+
+        if ($filterAccount) {
+            $filterAccount.innerHTML = '<option value="">所有账户</option>';
+            Object.keys(accounts).forEach(acc => {
+                $filterAccount.innerHTML += `<option value="${acc}">${acc}</option>`;
+            });
+        }
+    }
+
+
+    // --- 7. 预算中心逻辑 ---
+
+    /**
+     * 计算类别支出和预算进度
+     */
+    function calculateCategorySpending() {
+        const now = new Date();
+        const currentMonthExpenses = transactions.filter(t => 
+            t.type === 'expense' && 
+            t.date.getFullYear() === now.getFullYear() && 
+            t.date.getMonth() === now.getMonth()
+        );
+
+        const spending = {}; // { 'CategoryName': totalSpent }
+        
+        // 初始化所有支出类别为 0
+        categories.expense.forEach(cat => spending[cat] = 0);
+
+        currentMonthExpenses.forEach(t => {
+            // t.amount 是负值，-t.amount 得到正支出金额
+            spending[t.category] = (spending[t.category] || 0) + (-t.amount);
+        });
+
+        return spending;
+    }
+
+    /**
+     * 渲染预算中心 Tab
+     */
+    function renderBudgetCenter() {
+        const spending = calculateCategorySpending();
+        $budgetList.innerHTML = '';
+
+        categories.expense.forEach(cat => {
+            const budgetAmount = categoryBudgets[cat] || 0;
+            const spentAmount = spending[cat] || 0;
+            const progress = budgetAmount > 0 ? Math.min((spentAmount / budgetAmount) * 100, 100) : (spentAmount > 0 ? 100 : 0);
+            const remaining = budgetAmount - spentAmount;
+
+            let progressBarColor = 'bg-green-500';
+            let statusText = `剩余 ¥${Math.max(0, remaining).toFixed(2)}`;
+
+            if (remaining < 0) {
+                progressBarColor = 'bg-red-500';
+                statusText = `超支 ¥${Math.abs(remaining).toFixed(2)}`;
+            } else if (progress >= 75) {
+                progressBarColor = 'bg-yellow-500';
+            }
+
+            const item = `
+                <div class="py-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-lg font-semibold">${cat}</span>
+                        <div class="flex items-center space-x-2">
+                            <input type="number" data-category-name="${cat}" value="${budgetAmount.toFixed(2)}" min="0" step="0.01" placeholder="设置预算" class="budget-input p-2 border rounded-md w-32 text-sm text-right ring-primary focus:border-primary">
+                            <span class="text-gray-500 text-sm">已花费: ¥${spentAmount.toFixed(2)} / ${budgetAmount.toFixed(2)}</span>
+                        </div>
+                    </div>
+                    <div class="h-2 bg-gray-200 rounded-full">
+                        <div class="h-full rounded-full ${progressBarColor}" style="width: ${progress}%;"></div>
+                    </div>
+                    <p class="text-right text-sm mt-1 ${remaining < 0 ? 'text-red-500 font-medium' : 'text-gray-600'}">${statusText}</p>
+                </div>
+            `;
+            $budgetList.insertAdjacentHTML('beforeend', item);
+        });
+    }
+
+    // --- 8. 报告分析 (Chart.js) 逻辑 ---
+
+    // 颜色调色板，确保图表颜色一致且足够多
+    const colorPalette = [
+        '#4f46e5', // indigo-600 (Primary)
+        '#10b981', // green-600
+        '#f59e0b', // amber-500
+        '#ef4444', // red-500
+        '#3b82f6', // blue-500
+        '#8b5cf6', // violet-500
+        '#ec4899', // pink-500
+        '#06b6d4', // cyan-500
+        '#6366f1', // indigo-500
+        '#14b8a6', // teal-500
+    ];
+
+    /**
+     * 渲染支出类别分布饼图 (Expense Pie Chart)
+     */
+    function renderExpensePieChart() {
+        const now = new Date();
+        const currentMonthExpenses = transactions.filter(t => 
+            t.type === 'expense' && 
+            t.date.getFullYear() === now.getFullYear() && 
+            t.date.getMonth() === now.getMonth()
+        );
+
+        const categoryData = currentMonthExpenses.reduce((acc, t) => {
+            const category = t.category;
+            const amount = -t.amount;
+            acc[category] = (acc[category] || 0) + amount;
+            return acc;
+        }, {});
+
+        const labels = Object.keys(categoryData);
+        const data = Object.values(categoryData);
+
+        if (pieChart) pieChart.destroy();
+        
+        const ctx = document.getElementById('expense-pie-chart').getContext('2d');
+        pieChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: colorPalette,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right'
+                    },
+                    title: {
+                        display: true,
+                        text: '本月支出分布',
+                        font: { size: 16 }
+                    }
+                }
+            }
+        });
+    }
+
+    /**
+     * 渲染月度收支趋势图 (Monthly Trend Chart)
+     */
+    function renderMonthlyTrendChart() {
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+        sixMonthsAgo.setDate(1);
+
+        const monthlyData = {};
+        for (let i = 0; i < 6; i++) {
+            const date = new Date(sixMonthsAgo.getFullYear(), sixMonthsAgo.getMonth() + i, 1);
+            const key = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+            monthlyData[key] = { income: 0, expense: 0 };
+        }
+
+        transactions.forEach(t => {
+            const date = t.date;
+            const key = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+            
+            if (monthlyData.hasOwnProperty(key)) {
+                if (t.type === 'income') {
+                    monthlyData[key].income += t.amount;
+                } else if (t.type === 'expense') {
+                    monthlyData[key].expense += -t.amount;
+                }
+            }
+        });
+
+        const labels = Object.keys(monthlyData).map(key => key.split('-')[1] + '月');
+        const incomeData = Object.values(monthlyData).map(d => d.income);
+        const expenseData = Object.values(monthlyData).map(d => d.expense);
+        
+        const chartData = {
+            labels: labels,
+            datasets: [
+                {
+                    label: '收入',
+                    data: incomeData,
+                    borderColor: colorPalette[1], // 绿色
+                    backgroundColor: colorPalette[1] + '80',
+                    tension: 0.3
+                },
+                {
+                    label: '支出',
+                    data: expenseData,
+                    borderColor: colorPalette[3], // 红色
+                    backgroundColor: colorPalette[3] + '80',
+                    tension: 0.3
+                }
+            ]
+        };
+
+        if (trendChart) trendChart.destroy();
+
+        const ctx = document.getElementById('monthly-trend-chart').getContext('2d');
+        trendChart = new Chart(ctx, {
+            type: 'line',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { title: { display: true, text: '月份' } },
+                    y: { title: { display: true, text: '金额 (¥)' }, beginAtZero: true }
+                }
+            }
+        });
+    }
+
+    /**
+     * 渲染账户余额变化趋势图
+     */
+    function renderAccountBalanceTrendChart() {
+        // 收集所有唯一的交易日期，以便创建统一的时间轴
+        const uniqueDates = [...new Set(transactions.map(t => t.date.toISOString().split('T')[0]))].sort();
+        const allTransactions = [...transactions].sort((a, b) => a.date - b.date);
+
+        // 初始化每个账户的余额历史
+        const accountHistory = {};
+        Object.keys(accounts).forEach(acc => {
+            accountHistory[acc] = [];
+        });
+
+        let currentBalances = {};
+        Object.entries(accounts).forEach(([name, acc]) => {
+            currentBalances[name] = acc.initial;
+            // 确保每个账户都有一个“初始”数据点
+            accountHistory[name].push({ date: '初始', balance: acc.initial });
+        });
+        
+        // 模拟交易过程，记录每个账户在发生变动后的余额
+        allTransactions.forEach(t => {
+            if (t.type !== 'transfer' && accounts.hasOwnProperty(t.account)) {
+                currentBalances[t.account] += t.amount;
+                accountHistory[t.account].push({
+                    date: t.date.toISOString().split('T')[0], 
+                    balance: currentBalances[t.account]
+                });
+            }
+        });
+
+        // 统一时间轴：用所有独特的日期填充数据点
+        const labels = uniqueDates.map(d => new Date(d).toLocaleDateString('zh-CN', {month:'short', day:'numeric'}));
+
+        const datasets = Object.keys(accounts).map((acc, index) => {
+            const dataMap = {};
+            accountHistory[acc].forEach(h => dataMap[h.date] = h.balance);
+
+            let lastBalance = accounts[acc].initial;
+            const data = uniqueDates.map(date => {
+                if (dataMap[date] !== undefined) {
+                    lastBalance = dataMap[date];
+                    return lastBalance;
+                }
+                return lastBalance; // 保持上一个余额
+            });
+
+            // 确保起始点是初始余额
+            data.unshift(accounts[acc].initial); 
+            // 为图表标签添加初始点
+            if(labels[0] !== '初始') labels.unshift('初始'); 
+
+            return {
+                label: acc,
+                data: data,
+                borderColor: colorPalette[index % colorPalette.length],
+                backgroundColor: colorPalette[index % colorPalette.length] + '40',
+                fill: false,
+                tension: 0.3,
+            };
+        });
+
+        if (accountTrendChart) accountTrendChart.destroy();
+        
+        const ctx = document.getElementById('account-balance-trend-chart').getContext('2d');
+        accountTrendChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { title: { display: true, text: '日期' } },
+                    y: { title: { display: true, text: '余额 (¥)' } }
+                }
+            }
+        });
+    }
+
+    /**
+     * 渲染类别收支对比图 (Category Bar Chart)
+     */
+    function renderCategoryBarChart() {
+        const now = new Date();
+        const currentMonthTransactions = transactions.filter(t => 
+            t.date.getFullYear() === now.getFullYear() && 
+            t.date.getMonth() === now.getMonth()
+        );
+
+        const spendingData = {}; // { category: { income: 0, expense: 0 } }
+
+        [...categories.expense, ...categories.income].forEach(cat => {
+             spendingData[cat] = { income: 0, expense: 0 };
+        });
+
+        currentMonthTransactions.forEach(t => {
+            if (t.type === 'income') {
+                spendingData[t.category].income += t.amount;
+            } else if (t.type === 'expense') {
+                spendingData[t.category].expense += -t.amount;
+            }
+        });
+        
+        // 过滤掉收支都为 0 的类别
+        const labels = Object.keys(spendingData).filter(cat => spendingData[cat].income > 0 || spendingData[cat].expense > 0);
+        const incomeData = labels.map(cat => spendingData[cat].income);
+        const expenseData = labels.map(cat => spendingData[cat].expense);
+
+        if (categoryBarChart) categoryBarChart.destroy();
+
+        const ctx = document.getElementById('category-bar-chart').getContext('2d');
+        categoryBarChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: '收入',
+                        data: incomeData,
+                        backgroundColor: colorPalette[1], // 绿色
+                    },
+                    {
+                        label: '支出',
+                        data: expenseData,
+                        backgroundColor: colorPalette[3], // 红色
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { stacked: false, title: { display: true, text: '类别' } },
+                    y: { stacked: false, title: { display: true, text: '金额 (¥)' }, beginAtZero: true }
+                }
+            }
+        });
+    }
+
+
+    // --- 9. 事件处理函数 (Assets, Transactions, Settings) ---
+
+    /**
+     * 资产/负债表单提交
+     */
+    function addAsset(e) {
+        e.preventDefault();
+        const type = document.getElementById('asset-type').value;
+        const name = document.getElementById('asset-name').value.trim();
+        const value = parseFloat(document.getElementById('asset-value').value);
+
+        if (!name || isNaN(value) || value < 0) {
+            alert('请输入有效的资产名称和价值！');
+            return;
+        }
+
+        const newAsset = {
+            id: nextAssetId++,
+            name: name,
+            type: type,
+            value: value,
+        };
+
+        assets.push(newAsset);
+        $assetForm.reset();
+        updateUI('assets');
+    }
+
+    /**
+     * 删除资产/负债
+     */
+    window.deleteAsset = function(id) {
+        if (!confirm('确定要删除这条记录吗？')) return;
+        const index = assets.findIndex(a => a.id === id);
+        if (index !== -1) {
+            assets.splice(index, 1);
+            updateUI('assets');
+        }
+    }
+    
+    /**
+     * 更新资产 Tab 界面
+     */
+    function updateAssetUI() {
+        const { netWorth } = calculateNetWorth();
+        document.getElementById('net-worth').textContent = `¥ ${netWorth.toFixed(2)}`;
+
+        const currentAssets = assets.filter(a => a.type === 'Asset');
+        const currentLiabilities = assets.filter(a => a.type === 'Liability');
+
+        const $assetList = document.getElementById('asset-list');
+        const $liabilityList = document.getElementById('liability-list');
+
+        $assetList.innerHTML = currentAssets.length === 0 ? '<p class="p-2 text-gray-500">暂无资产记录。</p>' : '';
+        currentAssets.forEach(a => {
+            $assetList.insertAdjacentHTML('beforeend', `
+                <div class="flex justify-between items-center p-2 hover:bg-gray-50 transition duration-150">
+                    <span class="font-medium">${a.name}</span>
+                    <span class="text-green-600">¥ ${a.value.toFixed(2)}</span>
+                    <button onclick="deleteAsset(${a.id})" class="text-red-500 hover:text-red-700 p-1">删除</button>
+                </div>
+            `);
+        });
+
+        $liabilityList.innerHTML = currentLiabilities.length === 0 ? '<p class="p-2 text-gray-500">暂无负债记录。</p>' : '';
+        currentLiabilities.forEach(a => {
+            $liabilityList.insertAdjacentHTML('beforeend', `
+                <div class="flex justify-between items-center p-2 hover:bg-gray-50 transition duration-150">
+                    <span class="font-medium">${a.name}</span>
+                    <span class="text-red-600">- ¥ ${a.value.toFixed(2)}</span>
+                    <button onclick="deleteAsset(${a.id})" class="text-red-500 hover:text-red-700 p-1">删除</button>
+                </div>
+            `);
+        });
+    }
+
+    /**
+     * 处理初始余额表单提交
+     */
+    function handleInitialBalanceSubmit(e) {
+        e.preventDefault();
+        const inputs = document.querySelectorAll('.initial-balance-input');
+        let initialBalancesChanged = false;
+
+        inputs.forEach(input => {
+            const name = input.getAttribute('data-account-name');
+            const newInitial = parseFloat(input.value);
+
+            if (!isNaN(newInitial)) {
+                if (accounts[name].initial !== newInitial) {
+                    accounts[name].initial = newInitial;
+                    initialBalancesChanged = true;
+                }
+            } else {
+                alert(`账户 "${name}" 的初始余额无效。`);
+            }
+        });
+
+        if (initialBalancesChanged) {
+             updateUI('settings');
+             // 重新计算并保存后，需要跳转回 ledger 才能看到余额变化
+             document.querySelector('[data-tab="ledger"]').click();
+             alert('初始余额已保存！当前账户余额已重新计算。');
+        } else {
+            alert('未检测到初始余额更改。');
+        }
+       
+    }
+
+    /**
+     * 交易记录表单提交
+     */
+    function addTransaction(e) {
+        e.preventDefault();
+        const type = document.getElementById('type').value;
+        let amount = parseFloat(document.getElementById('amount').value);
+        const category = document.getElementById('category').value;
+        const account = document.getElementById('account').value;
+        const date = document.getElementById('date').value;
+        const description = document.getElementById('description').value || '';
+
+        if (isNaN(amount) || amount <= 0) {
+            alert('请输入有效的金额！');
+            return;
+        }
+
+        let finalAmount;
+        if (type === 'transfer') {
+            finalAmount = 0; // 转账不影响总资产，在计算账户余额时也不影响
+        } else {
+            finalAmount = type === 'expense' ? -amount : amount;
+        }
+
+        const newTransaction = {
+            id: nextTransactionId++,
+            date: new Date(date),
+            type: type,
+            category: category,
+            amount: finalAmount,
+            account: account,
+            description: description,
+        };
+
+        transactions.unshift(newTransaction);
+        $form.reset();
+        document.getElementById('date').valueAsDate = new Date();
+        updateUI();
+    }
+
+    /**
+     * 删除交易记录
+     */
+    window.deleteTransaction = function(id) {
+        if (!confirm('确定要删除这条交易记录吗？')) return;
+        const index = transactions.findIndex(t => t.id === id);
+        if (index !== -1) {
+            transactions.splice(index, 1);
+            updateUI();
+        }
+    }
+
+    /**
+     * 打开编辑交易模态框
+     */
+    window.openEditModal = function(id) {
+        const transaction = transactions.find(t => t.id === id);
+        if (!transaction || transaction.type === 'transfer') return; // 不允许编辑转账交易
+
+        updateCategoryDropdowns(); // 确保编辑模态框中的类别是最新的
+        updateAccountDropdowns(); // 确保编辑模态框中的账户是最新的
+
+        document.getElementById('edit-id').value = id;
+        document.getElementById('edit-type').value = transaction.type;
+        // 编辑金额时，显示绝对值
+        document.getElementById('edit-amount').value = Math.abs(transaction.amount).toFixed(2); 
+        document.getElementById('edit-category').value = transaction.category;
+        document.getElementById('edit-account').value = transaction.account;
+        document.getElementById('edit-date').valueAsDate = transaction.date;
+        document.getElementById('edit-description').value = transaction.description;
+
+        // 确保类别下拉菜单根据类型更新
+        document.getElementById('edit-type').dispatchEvent(new Event('change'));
+        // 重新设置类别值（因为上一步会清空并重新填充选项）
+        document.getElementById('edit-category').value = transaction.category;
+        
+        $editModal.classList.remove('hidden');
+    }
+    
+    /**
+     * 处理编辑交易表单提交
+     */
+    function handleEditTransaction(e) {
+        e.preventDefault();
+        const id = parseInt(document.getElementById('edit-id').value);
+        const transaction = transactions.find(t => t.id === id);
+
+        if (!transaction) return;
+
+        const type = document.getElementById('edit-type').value;
+        let amount = parseFloat(document.getElementById('edit-amount').value);
+        const category = document.getElementById('edit-category').value;
+        const account = document.getElementById('edit-account').value;
+        const date = document.getElementById('edit-date').value;
+        const description = document.getElementById('edit-description').value || '';
+
+        if (isNaN(amount) || amount <= 0) {
+            alert('请输入有效的金额！');
+            return;
+        }
+
+        // 更新交易对象
+        transaction.type = type;
+        transaction.amount = type === 'expense' ? -amount : amount;
+        transaction.category = category;
+        transaction.account = account;
+        transaction.date = new Date(date);
+        transaction.description = description;
+
+        $editModal.classList.add('hidden');
+        updateUI();
+    }
+
+    /**
+     * 筛选交易记录
+     */
+    function applyFilters() {
+        const keyword = document.getElementById('filter-keyword').value.toLowerCase();
+        const type = document.getElementById('filter-type').value;
+        const category = document.getElementById('filter-category').value;
+        const account = document.getElementById('filter-account').value;
+
+        const filtered = transactions.filter(t => {
+            // 关键词
+            const matchesKeyword = !keyword || 
+                                   t.description.toLowerCase().includes(keyword) || 
+                                   t.category.toLowerCase().includes(keyword);
+
+            // 类型
+            const matchesType = !type || t.type === type;
+
+            // 类别
+            const matchesCategory = !category || t.category === category;
+
+            // 账户
+            const matchesAccount = !account || t.account === account;
+
+            return matchesKeyword && matchesType && matchesCategory && matchesAccount;
+        });
+
+        renderTransactions(filtered);
+    }
+
+    /**
+     * 重置筛选条件
+     */
+    function resetFilters() {
+        document.getElementById('filter-keyword').value = '';
+        document.getElementById('filter-type').value = '';
+        document.getElementById('filter-category').value = '';
+        document.getElementById('filter-account').value = '';
+        renderTransactions();
+    }
+
+    /**
+     * 处理预算保存
+     */
+    function handleSaveBudgets() {
+        const inputs = document.querySelectorAll('.budget-input');
+        const newBudgets = {};
+        let changed = false;
+
+        inputs.forEach(input => {
+            const cat = input.getAttribute('data-category-name');
+            const budget = parseFloat(input.value);
+
+            if (isNaN(budget) || budget < 0) {
+                alert(`类别 "${cat}" 的预算值无效。`);
+                return;
+            }
+
+            if ((categoryBudgets[cat] || 0) !== budget) {
+                newBudgets[cat] = budget;
+                changed = true;
+            } else {
+                newBudgets[cat] = categoryBudgets[cat] || 0;
+            }
+        });
+
+        if (changed) {
+            categoryBudgets = newBudgets;
+            updateUI('budget');
+            alert('预算设置已保存！');
+        } else {
+            alert('预算没有变化。');
+        }
+    }
+    
+    /**
+     * 渲染类别管理列表
+     */
+    function renderCategoryManagement() {
+        $expenseCategoryList.innerHTML = '';
+        $incomeCategoryList.innerHTML = '';
+
+        const renderCategoryTag = (cat, type) => {
+            const isDefault = ['餐饮', '交通', '住房', '工资', '投资收益'].includes(cat);
+            const bgColor = type === 'expense' ? 'bg-red-100' : 'bg-green-100';
+            const textColor = type === 'expense' ? 'text-red-700' : 'text-green-700';
+            
+            // 默认类别不允许删除
+            const deleteBtn = isDefault ? 
+                `<span class="text-xs text-gray-500 ml-2"> (默认)</span>` : 
+                `<button onclick="deleteCategory('${cat}', '${type}')" class="ml-2 text-gray-400 hover:text-red-600 transition duration-150">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 7a1 1 0 012 0v8a1 1 0 11-2 0V7zm5-1a1 1 0 00-1 1v8a1 1 0 102 0V7a1 1 0 00-1-1z" clip-rule="evenodd" />
+                    </svg>
+                </button>`;
+
+            return `
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${bgColor} ${textColor}">
+                    ${cat} ${deleteBtn}
+                </span>
+            `;
+        };
+
+        categories.expense.forEach(cat => $expenseCategoryList.insertAdjacentHTML('beforeend', renderCategoryTag(cat, 'expense')));
+        categories.income.forEach(cat => $incomeCategoryList.insertAdjacentHTML('beforeend', renderCategoryTag(cat, 'income')));
+    }
+
+    /**
+     * 添加新类别
+     */
+    function addCategory() {
+        const name = $newCategoryName.value.trim();
+        const type = $newCategoryType.value;
+
+        if (!name) {
+            alert('类别名称不能为空！');
+            return;
+        }
+
+        if (categories.expense.includes(name) || categories.income.includes(name)) {
+            alert('该类别已存在。');
+            return;
+        }
+
+        if (type === 'expense') {
+            categories.expense.push(name);
+            categories.expense.sort();
+        } else if (type === 'income') {
+            categories.income.push(name);
+            categories.income.sort();
+        }
+
+        $newCategoryName.value = '';
+        updateUI('settings');
+        // 强制刷新记账本下拉菜单
+        updateCategoryDropdowns();
+        alert(`新类别 "${name}" 添加成功!`);
+    }
+
+    /**
+     * 删除类别
+     */
+    window.deleteCategory = function(cat, type) {
+        if (['餐饮', '交通', '住房', '工资', '投资收益'].includes(cat)) {
+            alert('默认类别不能被删除。');
+            return;
+        }
+
+        if (!confirm(`确定要删除类别 "${cat}" 吗？此操作不会删除已有交易记录。`)) return;
+
+        if (categories[type]) {
+            const index = categories[type].indexOf(cat);
+            if (index > -1) {
+                categories[type].splice(index, 1);
+                updateUI('settings');
+                // 强制刷新记账本下拉菜单
+                updateCategoryDropdowns();
+            }
+        }
+    }
+
+    /**
+     * 应用设置
+     */
+    function applySettings() {
+        settings.themeColor = $settingThemeColor.value;
+        settings.fontFamily = $settingFontFamily.value;
+        settings.fontSize = $settingFontSize.value;
+        settings.backgroundStyle = $settingBackgroundStyle.value;
+
+        // 移除所有主题/字体/大小类
+        $body.className = $body.className.replace(/theme-(indigo|green|red|blue)/g, '').trim();
+        $body.className = $body.className.replace(/font-(sans|serif|mono)/g, '').trim();
+        $body.className = $body.className.replace(/font-(sm|lg|base)/g, '').trim();
+        $body.className = $body.className.replace(/bg-style-(light|dark)/g, '').trim();
+
+        // 添加新的类
+        if (settings.themeColor !== 'indigo') {
+            $body.classList.add(`theme-${settings.themeColor}`);
+        }
+        if (settings.fontFamily !== 'sans') {
+            $body.classList.add(`font-${settings.fontFamily}`);
+        }
+        if (settings.fontSize !== 'base') {
+             $body.classList.add(`font-${settings.fontSize}`);
+        }
+        if (settings.backgroundStyle === 'dark') {
+            $body.classList.add('bg-style-dark');
+        }
+
+        updateUI('settings');
+        alert('外观设置已应用并保存！');
+    }
+
+    // --- 10. 初始化与事件绑定 ---
+
+    function init() {
+        loadData();
+        applySettings(); // 首次加载时应用保存的设置
+
+        // 绑定表单提交
+        $form.addEventListener('submit', addTransaction);
+        $assetForm.addEventListener('submit', addAsset);
+        $initialBalanceForm.addEventListener('submit', handleInitialBalanceSubmit);
+        document.getElementById('edit-transaction-form').addEventListener('submit', handleEditTransaction);
+
+        // 绑定按钮事件
+        document.getElementById('apply-filter-btn').addEventListener('click', applyFilters);
+        document.getElementById('reset-filter-btn').addEventListener('click', resetFilters);
+        $saveBudgetsBtn.addEventListener('click', handleSaveBudgets);
+        $addCategoryBtn.addEventListener('click', addCategory);
+        $applySettingsBtn.addEventListener('click', applySettings);
+
+        // 导入/导出功能绑定
+        $exportBtn.addEventListener('click', exportData);
+        $importBtn.addEventListener('click', () => {
+            $importFile.click(); // 触发隐藏的文件输入框点击
+        });
+        $importFile.addEventListener('change', importData); // 绑定文件选择后的导入处理函数
+
+        // 编辑模态框取消
+        document.getElementById('close-edit-modal-btn').addEventListener('click', () => {
+            $editModal.classList.add('hidden');
+        });
+
+        // Tab 切换逻辑
+        document.querySelectorAll('.tab-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active');
+
+                document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.add('hidden'));
+                
+                const targetTab = this.getAttribute('data-tab');
+                document.getElementById(targetTab).classList.remove('hidden');
+                
+                updateUI(targetTab); 
+            });
+        });
+
+        // 初始加载和显示
+        updateUI('ledger');
+        document.querySelector('[data-tab="ledger"]').click(); 
+    };
+
+    // 页面加载完成后运行初始化函数
+    window.onload = init;
+        
+    </script>
+</body>
+</html>
